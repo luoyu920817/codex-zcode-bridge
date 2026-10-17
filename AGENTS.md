@@ -1,6 +1,13 @@
 # AGENTS.md
 
-本仓库把 Codex 的任务派发给本机 ZCode 执行。任何 agent 动手前先读这份文件。
+本仓库提供 Codex 按需委派任务给本机 ZCode 的 Bridge。任何 agent 动手前先读这份文件。
+
+## ZCode Delegation Policy
+
+- 默认策略为 `explicit_only`：Codex 独立完成普通开发任务，只有用户通过自然语言明确要求将具体任务交给 ZCode 或可确定指向它的 Worker 时才委派，无需固定命令。
+- 仅提及、询问或比较 ZCode、分析 Bridge 源码不构成委派授权；用户要求 Codex 独立执行时不得委派。含糊请求默认自行处理；必须委派但目标 Agent 不明时才询问，不把通用“子代理”自动当作 ZCode。
+- 安装插件、注册 MCP 和工具可用不构成启动新 Worker 任务的理由。Codex 始终负责拆分、TaskPackage、跟踪与独立验收，决定 Accept / Retry / Replan，不把 `completed` 当作验收通过。
+- 本文件只约束其适用范围内的工作区，不会自动控制外部项目；插件在其他项目中的触发说明由 `plugins/codex-zcode-bridge/skills/zcode-bridge/SKILL.md` 提供。不修改用户全局 Codex 配置。
 
 ## 阅读顺序
 

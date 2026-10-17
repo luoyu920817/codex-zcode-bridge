@@ -17,7 +17,11 @@ codex plugin add codex-zcode-bridge@codex-zcode-bridge
 
 ## 派发任务
 
-向 Codex 描述开发任务和验收条件。Codex 根据任务决定是否准备 worktree，并把任务交给 ZCode。未提供 worktree 时在项目目录执行；提供时在该 worktree 执行。完成后由 Codex 检查 diff 和验收结果。`completed` 不等于 Codex 已接受改动。
+默认策略为 `explicit_only`：普通开发任务由 Codex 独立完成。需要委派时，用自然语言说明任务和验收条件，例如“这个 Bug 交给 ZCode 修复”或“把实现交给 ZCode，你负责 Review”，无需固定命令。仅提及、询问或比较 ZCode 不构成委派授权；要求 Codex 独立执行时不委派。含糊的“使用子代理处理”不直接调用 ZCode，必须委派但目标不明时才询问。
+
+确认委派后，Codex 准备 TaskPackage 并跟踪执行；小范围、低冲突任务优先当前分支 In-Place，大范围、高风险或存在冲突时按需准备 worktree。未提供 worktree 时在项目目录执行；提供时在该 worktree 执行。完成后由 Codex 独立检查 diff 和测试，决定 Accept / Retry / Replan。`completed` 不等于 Codex 已接受改动。
+
+插件安装、MCP 注册和启动环境检查不构成新任务的委派授权；环境检查和工具注册能力保持可用。此策略由 Skill 指导 Codex 语义判断，并非 Bridge 服务端的硬性开关；已有任务的恢复、跟踪、续作、取消和结果获取机制保留。仓库根目录的 `AGENTS.md` 只约束其适用工作区，不会自动应用到安装插件的其他项目。
 
 遇到安装或启动问题时，可调用 MCP 工具 `zcode_doctor` 查看只读诊断；它不会启动 ZCode session。
 

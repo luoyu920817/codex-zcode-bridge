@@ -1,11 +1,21 @@
 ---
 name: zcode-bridge
-description: 通过 Codex ZCode Bridge 把已授权的开发任务交给本机 ZCode，跟进实时进度、选择模型、按需要由 Codex 准备 worktree、审查改动并决定如何接收。
+description: 仅在用户通过自然语言明确要求 Codex 将开发任务委派给 ZCode 或其已配置 Worker 时使用；无需固定命令。普通开发任务、仅提及或询问 ZCode，以及明确要求 Codex 独立执行时不触发委派。
 ---
 
 # Zcode Bridge
 
-你是 Master，ZCode 是执行一个有明确边界任务的 worker。仅委派用户已授权的实现工作。不同执行目录可并发；不得让 Codex 与 ZCode 同时修改同一个实际执行目录。Bridge 会串行化共享执行目录的任务。
+你是 Master，ZCode 是执行一个有明确边界任务的 worker。仅委派用户明确授权交给 ZCode 的具体工作。不同执行目录可并发；不得让 Codex 与 ZCode 同时修改同一个实际执行目录。Bridge 会串行化共享执行目录的任务。
+
+## 委派策略：explicit_only
+
+- 默认由 Codex 独立分析、编码和验证。授权完成开发任务不等于授权委派；插件已安装、MCP 已注册或工具可用，也不构成启动新 Worker 任务的理由。
+- 根据用户当前意图及上下文识别自然语言委派，例如“这个 Bug 交给 ZCode 修复”“让 GLM Worker 编写测试”“把实现交给 ZCode，你负责 Review”。GLM Worker、之前配置的 Worker 等称呼须能明确指向 ZCode；不依赖固定关键词、`/zcode` 或 `@zcode`。
+- 仅询问能力或适用性、比较 Codex 与 ZCode、分析 Bridge 源码、引用委派示例，均不授权委派。用户明确要求 Codex 独立执行或禁止子代理时，不启动 ZCode。
+- 含糊请求默认不委派，由 Codex 直接处理；“使用子代理处理”不能直接映射为 ZCode。只有用户要求必须委派而目标 Agent 无法确定时，才询问目标。
+- 明确委派后，Codex 仍负责理解需求、拆分任务、准备 TaskPackage、跟踪执行并独立检查代码与测试，依据证据决定 Accept / Retry / Replan；`completed` 不等于验收通过。已有任务的查询、结果获取、续作和取消沿用下述流程，新的执行仍须符合用户授权范围。
+
+此策略是 Skill 的语义使用约束，不是 Bridge 服务端强制开关；不启用自动廉价模型路由。
 
 ## 持续目标
 
@@ -16,7 +26,7 @@ description: 通过 Codex ZCode Bridge 把已授权的开发任务交给本机 Z
 
 ## 派发
 
-1. 确认 Codex 项目根目录，并始终把它作为 zcode_task 的 `workspace`。根据 Codex 对任务的执行指示决定是否需要 worktree；需要时由 Codex 创建并准备，再把其现存绝对路径作为 `worktree_path`。Bridge 不创建、选择或删除 worktree；未提供该字段时任务直接在项目根目录执行。
+1. 确认 Codex 项目根目录，并始终把它作为 zcode_task 的 `workspace`。小范围、低冲突任务优先在当前分支 In-Place 执行；大范围、高风险或存在冲突时按需使用 worktree。这是确认委派后的独立工作区决策；需要时由 Codex 创建并准备，再把其现存绝对路径作为 `worktree_path`。Bridge 不创建、选择或删除 worktree；未提供该字段时任务直接在项目根目录执行。
 2. 将 objective、requirements、allowed_paths、forbidden_paths、acceptance_criteria 和 test_commands 写具体，路径约束只是任务指令，不是强制沙箱。只在任务需要时传入精简的 `context`，按 `PROJECT DECISIONS`、`CONSTRAINTS`、`RELEVANT FILES`、`OPEN DECISIONS — DO NOT CHOOSE` 组织；不要复制整段 Codex 对话。没有未决事项时省略该小节。不要把验收责任交给 ZCode。
 3. 用户指定 ZCode 模型时，传入 model: { provider_id, model_id }。优先使用 runtime 报告的精确 provider/model 标识；Bridge 会识别配置中声明的旧版 builtin ID 和账户 provider ID。若模型预检失败，从 `model_catalog` 事件复制 runtime 实际报告的完整标识再重试；不要猜思考档位。用户未指定时省略 model，保留 ZCode session 默认模型。
 4. 调用 zcode_task。MCP 报错时先解释和解决具体配置问题，不要重复提交相同 task_id。
